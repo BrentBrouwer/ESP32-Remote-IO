@@ -13,6 +13,8 @@ const char *password = "Janrenlen1";
 
 WebServer server(80);
 
+FestoCmmsControl* m_FestoControl;
+
 // --- 1. READ-ONLY OUTPUTS ---
 int outputPins[] = {2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27};
 const char *outputLabels[] = {
@@ -31,11 +33,11 @@ bool actionStates[5] = {false, false, false, false, false};
 const char* actionLabels[] = {"Enable", "Home", "Position 1", "Postion 2", "Spare (empty)"};
 
 // --- PLACE YOUR CUSTOM IMPLEMENTATIONS HERE ---
-void customAction1() { Home(); }
-void customAction2() { /* Add your code for Button 2 here */ }
-void customAction3() { /* Add your code for Button 3 here */ }
-void customAction4() { /* Add your code for Button 4 here */ }
-void customAction5() { /* Add your code for Button 5 here */ }
+void customAction1() { m_FestoControl->DisableController(); }
+void customAction2() { m_FestoControl->EnableController(); }
+void customAction3() { m_FestoControl->Home(); }
+void customAction4() { m_FestoControl->StopMotion(); }
+void customAction5() { m_FestoControl->GoToPosition(1); }
 
 // --- HTML & UI ---
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -179,6 +181,9 @@ void setup() {
     pinMode(LED_ALIVE_PIN, OUTPUT);
     for (int i = 0; i < outputCount; i++) { pinMode(outputPins[i], OUTPUT); digitalWrite(outputPins[i], LOW); }
     for (int i = 0; i < inputCount; i++) { pinMode(inputPins[i], INPUT_PULLUP); }
+
+    m_FestoControl = new FestoCmmsControl(4, 5, 12, 13, 14, 15, 0, 0, 0, 0);
+
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
     server.on("/", [](){ server.send(200, "text/html", INDEX_HTML); });

@@ -13,7 +13,7 @@ const char *password = "Janrenlen1";
 
 WebServer server(80);
 
-FestoCmmsControl* m_FestoControl;
+FestoCmmsControl *m_FestoControl;
 
 // --- 1. READ-ONLY OUTPUTS ---
 int outputPins[] = {2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27};
@@ -29,15 +29,29 @@ int inputPins[] = {32, 33, 34, 35, 36, 39};
 int inputCount = sizeof(inputPins) / sizeof(int);
 
 // --- 3. CUSTOM ACTION BUTTONS (5 Cards) ---
+const int DefinedActions = 6;
 bool actionStates[5] = {false, false, false, false, false};
-const char* actionLabels[] = {"Enable", "Home", "Position 1", "Postion 2", "Spare (empty)"};
+char actionLabels[DefinedActions][32] = {"Enable", "Home", "Stop", "Position 1", "Position 2", "Spare (empty)"};
 
 // --- PLACE YOUR CUSTOM IMPLEMENTATIONS HERE ---
-void customAction1() { m_FestoControl->DisableController(); }
-void customAction2() { m_FestoControl->EnableController(); }
-void customAction3() { m_FestoControl->Home(); }
-void customAction4() { m_FestoControl->StopMotion(); }
-void customAction5() { m_FestoControl->GoToPosition(1); }
+void customAction1() 
+{ 
+    if (actionStates[0])
+    {
+        strcpy(actionLabels[0], "Disable");
+        m_FestoControl->EnableController(); 
+    }
+    else
+    {
+        strcpy(actionLabels[0], "Enable");
+        m_FestoControl->DisableController(); 
+    }
+}
+void customAction2() { m_FestoControl->Home(); }
+void customAction3() { m_FestoControl->StopMotion(); }
+void customAction4() { m_FestoControl->GoToPosition(1); }
+void customAction5() { m_FestoControl->GoToPosition(2); }
+void customAction6() {  }
 
 // --- HTML & UI ---
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -118,18 +132,35 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
 // --- Server Handlers ---
 
-void handleAction() {
-    if (server.hasArg("id")) {
+void handleAction()
+{
+    if (server.hasArg("id"))
+    {
         int id = server.arg("id").toInt();
-        if (id >= 0 && id < 5) {
+        if (id >= 0 && id < 5)
+        {
             actionStates[id] = !actionStates[id];
             // Call the specific empty method
-            switch(id) {
-                case 0: customAction1(); break;
-                case 1: customAction2(); break;
-                case 2: customAction3(); break;
-                case 3: customAction4(); break;
-                case 4: customAction5(); break;
+            switch (id)
+            {
+                case 0:
+                    customAction1();
+                    break;
+                case 1:
+                    customAction2();
+                    break;
+                case 2:
+                    customAction3();
+                    break;
+                case 3:
+                    customAction4();
+                    break;
+                case 4:
+                    customAction5();
+                    break;
+                case 5:
+                    customAction6();
+                    break;
             }
             server.send(200, "text/plain", "OK");
             return;
@@ -138,21 +169,28 @@ void handleAction() {
     server.send(400, "text/plain", "Invalid Action");
 }
 
-void handleStatus() {
+void handleStatus()
+{
     String json = "{\"actions\":[";
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < DefinedActions; i++)
+    {
         json += "{\"label\":\"" + String(actionLabels[i]) + "\",\"state\":\"" + (actionStates[i] ? "HIGH" : "LOW") + "\"}";
-        if (i < 4) json += ",";
+        if (i < (DefinedActions - 1))
+            json += ",";
     }
     json += "],\"outputs\":[";
-    for (int i = 0; i < outputCount; i++) {
+    for (int i = 0; i < outputCount; i++)
+    {
         json += "{\"pin\":" + String(outputPins[i]) + ",\"label\":\"" + String(outputLabels[i]) + "\",\"state\":\"" + (digitalRead(outputPins[i]) ? "HIGH" : "LOW") + "\"}";
-        if (i < outputCount - 1) json += ",";
+        if (i < outputCount - 1)
+            json += ",";
     }
     json += "],\"inputs\":[";
-    for (int i = 0; i < inputCount; i++) {
+    for (int i = 0; i < inputCount; i++)
+    {
         json += "{\"pin\":" + String(inputPins[i]) + ",\"state\":\"" + (digitalRead(inputPins[i]) ? "HIGH" : "LOW") + "\"}";
-        if (i < inputCount - 1) json += ",";
+        if (i < inputCount - 1)
+            json += ",";
     }
     json += "]}";
     server.send(200, "application/json", json);
@@ -160,27 +198,41 @@ void handleStatus() {
 
 // ... (Rest of setup and loop from your original code remains the same)
 
-void ControlAliveLed() {
+void ControlAliveLed()
+{
     bool on = digitalRead(LED_ALIVE_PIN);
     unsigned long now = millis();
-    if (on) {
-        if (now - AliveLedStatusChanged >= AliveOnPeriodTime) {
+    if (on)
+    {
+        if (now - AliveLedStatusChanged >= AliveOnPeriodTime)
+        {
             AliveLedStatusChanged = now;
             digitalWrite(LED_ALIVE_PIN, LOW);
         }
-    } else {
-        if (now - AliveLedStatusChanged >= AliveOffPeriodTime) {
+    }
+    else
+    {
+        if (now - AliveLedStatusChanged >= AliveOffPeriodTime)
+        {
             AliveLedStatusChanged = now;
             digitalWrite(LED_ALIVE_PIN, HIGH);
         }
     }
 }
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
     pinMode(LED_ALIVE_PIN, OUTPUT);
-    for (int i = 0; i < outputCount; i++) { pinMode(outputPins[i], OUTPUT); digitalWrite(outputPins[i], LOW); }
-    for (int i = 0; i < inputCount; i++) { pinMode(inputPins[i], INPUT_PULLUP); }
+    for (int i = 0; i < outputCount; i++)
+    {
+        pinMode(outputPins[i], OUTPUT);
+        digitalWrite(outputPins[i], LOW);
+    }
+    for (int i = 0; i < inputCount; i++)
+    {
+        pinMode(inputPins[i], INPUT_PULLUP);
+    }
 
     m_FestoControl = new FestoCmmsControl(4, 5, 12, 13, 14, 15, 16, 17, 18, 0, 0, 0, 0);
     m_FestoControl->GoToPosition(0);
@@ -190,14 +242,20 @@ void setup() {
     m_FestoControl->GoToPosition(63);
 
     WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-    server.on("/", [](){ server.send(200, "text/html", INDEX_HTML); });
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+    server.on("/", []()
+              { server.send(200, "text/html", INDEX_HTML); });
     server.on("/action", handleAction);
     server.on("/status", handleStatus);
     server.begin();
 }
 
-void loop() {
+void loop()
+{
     ControlAliveLed();
     server.handleClient();
 }

@@ -17,8 +17,8 @@ WebServer server(80);
 int outputPins[] = {4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27};
 // EDIT THESE LABELS: Ensure there are exactly 16 labels to match the 16 pins above
 const char *outputLabels[] = {
-    "Enable controller", "Disable stop", "Enable motor", "Start positioning",
-    "Record bit 0", "Record bit 1", "Output 16", "Output 17",
+    "Enable controller [DIN5]", "Disable stop [DIN13]", "Enable motor [DIN4]", "Start positioning [DIN8]",
+    "Record bit 0 [DIN0]", "Record bit 1 [DIN1]", "Output 16", "Output 17",
     "Output 18", "Output 19", "Output 21", "Output 22",
     "Output 23", "Output 25", "Output 26", "Output 27"};
 

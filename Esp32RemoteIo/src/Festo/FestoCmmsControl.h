@@ -1,4 +1,3 @@
-
 class FestoCmmsControl
 {
     public:
@@ -9,6 +8,9 @@ class FestoCmmsControl
                          int diStartMotion,
                          int diRecordBit0,
                          int diRecordBit1,
+                         int diRecordBit2,
+                         int diRecordBit3,
+                         int diRecordBit4,
                          int doEnabled,
                          int doMotionFinished,
                          int doTest,
@@ -20,19 +22,28 @@ class FestoCmmsControl
         void StopMotion();
         void Home();
         void GoToPosition(int posNr);
+        bool HasError();
 
     private:
         // CMMS Inputs
-        int m_DiEnableController;
-        int m_DiEnableMotor;
-        int m_DiDisableStop; 
-        int m_DiStartMotion; 
-        int m_DiRecordBit0;
-        int m_DiRecordBit1;
+        const int m_DiEnableController;
+        const int m_DiEnableMotor;
+        const int m_DiDisableStop; 
+        const int m_DiStartMotion; 
+        const int m_DiRecordBit0;
+        const int m_DiRecordBit1;
+        const int m_DiRecordBit2;
+        const int m_DiRecordBit3;
+        const int m_DiRecordBit4;
+        const int* m_RecordBits[5];
 
         // CMMS Outputs
-        int m_DoEnabled;
-        int m_DoMotionFinished;
-        int m_DoTest;
-        int m_DoError;
+        const int m_DoEnabled;
+        const int m_DoMotionFinished;
+        const int m_DoUnknown;
+        const int m_DoError;
+
+        // Methods
+        void SetRecordBits();
+        void SetController(bool enable);
 };

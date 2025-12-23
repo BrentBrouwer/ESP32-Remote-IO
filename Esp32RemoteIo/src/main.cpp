@@ -182,7 +182,12 @@ void setup() {
     for (int i = 0; i < outputCount; i++) { pinMode(outputPins[i], OUTPUT); digitalWrite(outputPins[i], LOW); }
     for (int i = 0; i < inputCount; i++) { pinMode(inputPins[i], INPUT_PULLUP); }
 
-    m_FestoControl = new FestoCmmsControl(4, 5, 12, 13, 14, 15, 0, 0, 0, 0);
+    m_FestoControl = new FestoCmmsControl(4, 5, 12, 13, 14, 15, 16, 17, 18, 0, 0, 0, 0);
+    m_FestoControl->GoToPosition(0);
+    m_FestoControl->GoToPosition(1);
+    m_FestoControl->GoToPosition(2);
+    m_FestoControl->GoToPosition(3);
+    m_FestoControl->GoToPosition(63);
 
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }

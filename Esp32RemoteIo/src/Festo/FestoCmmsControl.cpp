@@ -57,15 +57,13 @@ void FestoCmmsControl::GoToPosition(int posNr)
         // Check which bits are set
         for (int i = 0; i < 5; i++)
         {
-            Serial.printf("Cycle: %i", i);
-            posNr = posNr << 1;
-            Serial.printf("Value: %i", posNr);
+            // Serial.printf("Cycle: %i, Value: %i", i, posNr);
             bool active = posNr & 1;
-            // Serial.printf("Bit: %s", active ? "active" : "inactive");
-            Serial.printf("Output: %i %s", *m_RecordBits[i], active ? "active" : "inactive");
+            Serial.printf("Index: %i -> Output: %i %s", i, m_RecordBits[i], active ? "active" : "inactive");
 
             // Set the record bit input
-            digitalWrite(*m_RecordBits[i], active ? HIGH : LOW);
+            digitalWrite(m_RecordBits[i], active ? HIGH : LOW);
+            posNr = posNr >> 1;
         }
 
         digitalWrite(m_DiStartMotion, true);
@@ -84,30 +82,26 @@ bool FestoCmmsControl::HasError()
 
 void FestoCmmsControl::SetRecordBits()
 {
-    const int *recordBitAddr;
+    int recordBitPin;
     for (int i = 0; i < 5; i++)
     {
         switch (i)
         {
-        case 0:
-            recordBitAddr = &m_DiRecordBit0;
-        case 1:
-            recordBitAddr = &m_DiRecordBit1;
-        case 2:
-            recordBitAddr = &m_DiRecordBit2;
-        case 3:
-            recordBitAddr = &m_DiRecordBit3;
-        case 4:
-            recordBitAddr = &m_DiRecordBit4;
+            case 0: recordBitPin = m_DiRecordBit0; break;
+            case 1: recordBitPin = m_DiRecordBit1; break;
+            case 2: recordBitPin = m_DiRecordBit2; break;
+            case 3: recordBitPin = m_DiRecordBit3; break;
+            case 4: recordBitPin = m_DiRecordBit4; break;
+            default: return;
         }
-        m_RecordBits[i] = recordBitAddr;
+        m_RecordBits[i] = recordBitPin;
     }
 
     Serial.println("Record bit pins:");
     for (int i = 0; i < 5; i++)
     {
-        int value = *m_RecordBits[i];
-        Serial.printf("  Pin nr: %i", *m_RecordBits[i]);
+        int value = m_RecordBits[i];
+        Serial.printf("  Pin nr: %i", m_RecordBits[i]);
     }
 }
 

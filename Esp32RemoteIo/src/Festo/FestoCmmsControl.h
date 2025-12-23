@@ -35,7 +35,7 @@ class FestoCmmsControl
         const int m_DiRecordBit2;
         const int m_DiRecordBit3;
         const int m_DiRecordBit4;
-        const int* m_RecordBits[5];
+        int m_RecordBits[5];
 
         // CMMS Outputs
         const int m_DoEnabled;

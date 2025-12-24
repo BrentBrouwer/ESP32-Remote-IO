@@ -17,24 +17,24 @@ FestoCmmsControl *m_FestoControl;
 // --- 1. READ-ONLY OUTPUTS ---
 int outputPins[] = {2, 4, 5, 12, 13, 14, 15, 16, 17, 18};
 const char *outputLabels[] = {
-    "Keep-Alive", "Enable controller [DIN5]", "Enable motor [DIN4]", "Disable stop [DIN13]", "Start positioning [DIN8]",
+    "Keep-Alive", "Enable controller [DIN5]", "Disable stop [DIN13]", "Enable motor [DIN4]", "Start positioning [DIN8]",
     "Record bit 0 [DIN0]", "Record bit 1 [DIN1]", "Record bit 2 [DIN2]", "Record bit 3 [DIN3]", "Record bit 4 [DIN10]"};
 int outputCount = sizeof(outputPins) / sizeof(int);
 
 // --- 2. INPUTS ---
-int inputPins[] = {32, 33, 34, 35, 36, 39};
+int inputPins[] = {32, 33, 34, 35};
 int inputCount = sizeof(inputPins) / sizeof(int);
 
 // --- 3. CUSTOM ACTION BUTTONS ---
 const int DefinedActions = 6;
 bool actionStates[DefinedActions] = {false, false, false, false, false, false};
-char actionLabels[DefinedActions][32] = {"Enable", "Home", "Stop", "Pos 1", "Pos 2", "Reset"};
+char actionLabels[DefinedActions][32] = {"Enable", "Stop motion", "Home", "Pos 1", "Pos 2", "All off"};
 
 // NEW: Define if button is a Toggle (true) or a Momentary Click (false)
 bool actionIsToggle[DefinedActions] = {
     true,  // Enable (Toggle)
+    false,  // Stop (Click)
     false, // Home (Click)
-    true, // Stop (Click)
     false, // Position 1 (Click)
     false, // Position 2 (Click)
     false  // Reset (Click)
@@ -54,23 +54,11 @@ void customAction1()
         m_FestoControl->DisableController();
     }
 }
-void customAction2() { m_FestoControl->Home(); }
-void customAction3() 
-{  
-    if (actionStates[2])
-    {
-        strcpy(actionLabels[0], "Disable");
-        m_FestoControl->StopMotion(true);
-    }
-    else
-    {
-        strcpy(actionLabels[0], "Enable");
-        m_FestoControl->StopMotion(false);
-    }
-}
+void customAction2() { m_FestoControl->StopMotion(); }
+void customAction3() { m_FestoControl->Home(); }
 void customAction4() { m_FestoControl->GoToPosition(1); }
 void customAction5() { m_FestoControl->GoToPosition(2); }
-void customAction6() { Serial.println("Reset Triggered"); }
+void customAction6() { m_FestoControl->AllOff(); }
 
 // --- HTML & UI ---
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -101,14 +89,22 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <h2>ESP32 Festo Control</h2>
     <h3 class="section-title">Control Actions</h3>
     <div class="container" id="action-container"></div>
-    <h3 class="section-title">Output Monitoring</h3>
+    <h3 class="section-title">ESP32 -> Festo</h3>
     <div class="container" id="output-container"></div>
-    <h3 class="section-title">Inputs</h3>
+    <h3 class="section-title">ESP32 <- Festo</h3>
     <div class="container" id="input-container"></div>
 
     <script>
         function triggerAction(id) {
             fetch(`/action?id=${id}`).then(() => updateStatus());
+        }
+
+        function setInputName(id) {
+            if (id == 32) return "Enabled";
+            if (id == 33) return "Motion finished";
+            if (id == 34) return "Acknowledge start";
+            if (id == 35) return "Error";
+            return "Input " + id;
         }
 
         function updateStatus() {
@@ -130,7 +126,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
                 document.getElementById('input-container').innerHTML = data.inputs.map(i => `
                     <div class="card card-in">
-                        <span class="label">Sensor ${i.pin}</span>
+                        <span class="label">${setInputName(i.pin)}</span>
                         <div class="status ${i.state}">${i.state}</div>
                     </div>`).join('');
             });
@@ -250,10 +246,11 @@ void setup()
     m_FestoControl = new FestoCmmsControl(4, 12, 5, 13, 14, 15, 16, 17, 18, 32, 33, 34, 35);
 
     WiFi.begin(ssid, password);
+    Serial.print("Connecting..");
     while (WiFi.status() != WL_CONNECTED)
     {
-        delay(500);
         Serial.print(".");
+        delay(500);
     }
 
     server.on("/", []()
@@ -261,7 +258,7 @@ void setup()
     server.on("/action", handleAction);
     server.on("/status", handleStatus);
     server.begin();
-    Serial.println("\nReady.");
+    Serial.println("\nSetup executed");
 }
 
 void loop()

@@ -19,10 +19,11 @@ class FestoCmmsControl
         // Methods
         void EnableController();
         void DisableController();
-        void StopMotion(bool stop);
-        void Home(bool doHome);
+        void StopMotion();
+        void Home();
         void GoToPosition(int posNr);
         bool HasError();
+        void AllOff();
 
     private:
         // CMMS Inputs
@@ -44,6 +45,8 @@ class FestoCmmsControl
         const int m_DoError;
 
         // Methods
+        void PrintPins();
         void SetRecordBits();
         void SetController(bool enable);
+        void WaitForMotionFinish();
 };

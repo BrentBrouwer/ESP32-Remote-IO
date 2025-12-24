@@ -16,53 +16,34 @@ FestoCmmsControl::FestoCmmsControl(int diEnableController,
                                    int doError)
     : m_DiEnableController(diEnableController), m_DiEnableMotor(diEnableMotor), m_DiDisableStop(diDisableStop), m_DiStartMotion(diStartMotion), m_DiRecordBit0(diRecordBit0), m_DiRecordBit1(diRecordBit1), m_DiRecordBit2(diRecordBit2), m_DiRecordBit3(diRecordBit3), m_DiRecordBit4(diRecordBit4), m_DoEnabled(doEnabled), m_DoMotionFinished(doMotionFinished), m_DoUnknown(doUnknown), m_DoError(doError)
 {
+    // PrintPins();
     SetRecordBits();
     Serial.printf("Enable controller: %i\n", m_DiEnableController);
-    digitalWrite(m_DiEnableController, LOW);
-    digitalWrite(m_DiEnableMotor, LOW);
-    digitalWrite(m_DiDisableStop, LOW);
-    digitalWrite(m_DiStartMotion, LOW);
-    digitalWrite(m_DiRecordBit0, LOW);
-    digitalWrite(m_DiRecordBit1, LOW);
+    AllOff();
     Serial.println("Festo controller created");
 }
 
 void FestoCmmsControl::EnableController()
 {
-    Serial.println("Enable controller");
-    // SetController(true);
-    
-    digitalWrite(m_DiEnableMotor, true);
-    digitalWrite(m_DiEnableController, true);
+    SetController(true);
 }
 
 void FestoCmmsControl::DisableController()
 {
-    Serial.println("Disable controller");
-    // SetController(false);
-    
-    digitalWrite(m_DiEnableMotor, false);
-    digitalWrite(m_DiEnableController, false);
+    SetController(false);
 }
 
-void FestoCmmsControl::StopMotion(bool stop)
+void FestoCmmsControl::StopMotion()
 {
     Serial.println("Stop motion");
-    digitalWrite(m_DiStartMotion, !stop);
-    digitalWrite(m_DiDisableStop, stop);
+    digitalWrite(m_DiStartMotion, false);
+    digitalWrite(m_DiDisableStop, false);
 }
 
-void FestoCmmsControl::Home(bool doHome)
+void FestoCmmsControl::Home()
 {
-    if (doHome)
-    {
-        Serial.println("Start homing");
-        GoToPosition(0);
-    }
-    else
-    {
-        StopMotion(true);
-    }
+    Serial.println("Start homing");
+    GoToPosition(0);
 }
 
 void FestoCmmsControl::GoToPosition(int posNr)
@@ -83,21 +64,50 @@ void FestoCmmsControl::GoToPosition(int posNr)
             posNr = posNr >> 1;
         }
 
+        digitalWrite(m_DiDisableStop, true);
+        delay(50);
         digitalWrite(m_DiStartMotion, true);
         Serial.println("");
     }
     else
     {
         Serial.printf("Invalid pos nr: %i\n", posNr);
-        StopMotion(true);
+        StopMotion();
     }
 }
 
 bool FestoCmmsControl::HasError()
 {
     bool hasError = digitalRead(m_DoError);
-    Serial.printf("Controller has%s error\n", hasError ? " " : " no");
+    Serial.printf("Controller has%serror\n", hasError ? " " : " no ");
     return hasError;
+}
+
+void FestoCmmsControl::AllOff()
+{
+    digitalWrite(m_DiEnableController, LOW);
+    digitalWrite(m_DiEnableMotor, LOW);
+    digitalWrite(m_DiDisableStop, LOW);
+    digitalWrite(m_DiStartMotion, LOW);
+    digitalWrite(m_DiRecordBit0, LOW);
+    digitalWrite(m_DiRecordBit1, LOW);
+    digitalWrite(m_DiRecordBit2, LOW);
+    digitalWrite(m_DiRecordBit3, LOW);
+    digitalWrite(m_DiRecordBit4, LOW);
+}
+
+void FestoCmmsControl::PrintPins()
+{
+    Serial.println("Pin allocation");
+    Serial.printf("Enable controller: %i\n", m_DiEnableController);
+    Serial.printf("Enable motor: %i\n", m_DiEnableMotor);
+    Serial.printf("Disable stop: %i\n", m_DiDisableStop);
+    Serial.printf("Start motion: %i\n", m_DiStartMotion);
+    Serial.printf("Record bit 0: %i\n", m_DiRecordBit0);
+    Serial.printf("Record bit 1: %i\n", m_DiRecordBit1);
+    Serial.printf("Record bit 2: %i\n", m_DiRecordBit2);
+    Serial.printf("Record bit 3: %i\n", m_DiRecordBit3);
+    Serial.printf("Record bit 4: %i\n", m_DiRecordBit4);
 }
 
 void FestoCmmsControl::SetRecordBits()
@@ -123,6 +133,16 @@ void FestoCmmsControl::SetRecordBits()
 
 void FestoCmmsControl::SetController(bool enable)
 {
+    Serial.printf("%s controller\n", enable ? "Enable" : "Disable");
     digitalWrite(m_DiEnableMotor, enable);
+    delay(50);
     digitalWrite(m_DiEnableController, enable);
+}
+
+void FestoCmmsControl::WaitForMotionFinish()
+{
+    while (!digitalRead(m_DoMotionFinished))
+    {
+        delay(10);
+    }
 }

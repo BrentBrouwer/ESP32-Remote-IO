@@ -28,14 +28,13 @@ int inputPins[] = {32, 33, 34, 35};
 int inputCount = sizeof(inputPins) / sizeof(int);
 
 // --- 3. CUSTOM ACTION BUTTONS ---
-const int DefinedActions = 6;
-bool actionStates[DefinedActions] = {false, false, false, false, false, false};
-char actionLabels[DefinedActions][32] = {"Enable", "Stop motion", "Home", "Pos 1", "Pos 2", "All off"};
+const int DefinedActions = 5;
+bool actionStates[DefinedActions] = {false, false, false, false, false};
+char actionLabels[DefinedActions][32] = {"Enable", "Home", "Pos 1", "Pos 2", "All off"};
 
 // NEW: Define if button is a Toggle (true) or a Momentary Click (false)
 bool actionIsToggle[DefinedActions] = {
     true,  // Enable (Toggle)
-    true,  // Stop (Click)
     false, // Home (Click)
     false, // Position 1 (Click)
     false, // Position 2 (Click)
@@ -57,16 +56,10 @@ void customAction1()
     }
 }
 
-void customAction2() 
-{ 
-    // m_FestoControl->StopMotion(); 
-    strcpy(actionLabels[1], "Empty");
-}
-
-void customAction3() { m_FestoControl->Home(); }
-void customAction4() { m_FestoControl->GoToPosition(1); }
-void customAction5() { m_FestoControl->GoToPosition(2); }
-void customAction6() { /*m_FestoControl->AllOff();*/ strcpy(actionLabels[5], "Empty"); }
+void customAction2() { m_FestoControl->Home(); }
+void customAction3() { m_FestoControl->GoToPosition(1); }
+void customAction4() { m_FestoControl->GoToPosition(2); }
+void customAction5() { m_FestoControl->AllOff(); }
 
 // --- HTML & UI ---
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -159,24 +152,21 @@ void handleAction()
             // Execute function
             switch (id)
             {
-            case 0:
-                customAction1();
-                break;
-            case 1:
-                customAction2();
-                break;
-            case 2:
-                customAction3();
-                break;
-            case 3:
-                customAction4();
-                break;
-            case 4:
-                customAction5();
-                break;
-            case 5:
-                customAction6();
-                break;
+                case 0:
+                    customAction1();
+                    break;
+                case 1:
+                    customAction2();
+                    break;
+                case 2:
+                    customAction3();
+                    break;
+                case 3:
+                    customAction4();
+                    break;
+                case 4:
+                    customAction5();
+                    break;
             }
 
             // If it's a click button, we reset state to LOW immediately for logic purposes

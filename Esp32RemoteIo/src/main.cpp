@@ -84,6 +84,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         .btn-toggle { background-color: #ff9800; }
         .btn-click { background-color: #607d8b; }
         button:active { transform: scale(0.95); opacity: 0.8; }
+        button:disabled { background-color: #ccc !important; color: #888 !important; cursor: not-allowed; transform: none !important; opacity: 0.6; }
     </style>
 </head>
 <body>
@@ -114,7 +115,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     <div class="card card-action">
                         <span class="label">${a.label}</span>
                         <div class="status ${a.state}">${a.isToggle ? a.state : 'READY'}</div>
-                        <button class="${a.isToggle ? 'btn-toggle' : 'btn-click'}" onclick="triggerAction(${i})">
+                        <button 
+                            class="${a.isToggle ? 'btn-toggle' : 'btn-click'}" 
+                            onclick="triggerAction(${i})"
+                            ${a.enabled ? '' : 'disabled'} 
+                        >
                             ${a.isToggle ? 'TOGGLE' : 'CLICK'}
                         </button>
                     </div>`).join('');
@@ -187,9 +192,16 @@ void handleStatus()
     String json = "{\"actions\":[";
     for (int i = 0; i < DefinedActions; i++)
     {
+        bool enabled = true;
+        if (i > 0 && m_FestoControl->IsControllerReady())
+        {
+            enabled = false;
+        }
+
         json += "{\"label\":\"" + String(actionLabels[i]) + "\",";
         json += "\"state\":\"" + String(actionStates[i] ? "HIGH" : "LOW") + "\",";
-        json += "\"isToggle\":" + String(actionIsToggle[i] ? "true" : "false") + "}";
+        json += "\"isToggle\":" + String(actionIsToggle[i] ? "true" : "false") + ",";
+        json += "\"enabled\":" + String(enabled ? "true" : "false") + "}"; // Added this line
         if (i < (DefinedActions - 1))
             json += ",";
     }

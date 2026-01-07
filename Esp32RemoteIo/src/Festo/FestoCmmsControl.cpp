@@ -76,6 +76,11 @@ void FestoCmmsControl::GoToPosition(int posNr)
     }
 }
 
+bool FestoCmmsControl::IsControllerReady()
+{
+    return digitalRead(m_DoControllerEnabled);
+}
+
 bool FestoCmmsControl::HasError()
 {
     bool hasError = digitalRead(m_DoError);
@@ -152,7 +157,7 @@ void FestoCmmsControl::SetController(bool enable)
 
 void FestoCmmsControl::WaitForControllerReady()
 {
-    while (!digitalRead(m_DoControllerEnabled))
+    while (!IsControllerReady())
     {
         delay(10);
     }

@@ -22,6 +22,7 @@ class FestoCmmsControl
         // void StopMotion();
         void Home();
         void GoToPosition(int posNr);
+        bool IsControllerReady();
         bool HasError();
         bool IsMotionFinished();
         bool IsStartAcknowledged();

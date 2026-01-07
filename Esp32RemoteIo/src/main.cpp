@@ -56,14 +56,17 @@ void customAction1()
         m_FestoControl->DisableController();
     }
 }
+
 void customAction2() 
 { 
-    m_FestoControl->StopMotion(); 
+    // m_FestoControl->StopMotion(); 
+    strcpy(actionLabels[1], "Empty");
 }
+
 void customAction3() { m_FestoControl->Home(); }
 void customAction4() { m_FestoControl->GoToPosition(1); }
 void customAction5() { m_FestoControl->GoToPosition(2); }
-void customAction6() { m_FestoControl->AllOff(); }
+void customAction6() { /*m_FestoControl->AllOff();*/ strcpy(actionLabels[5], "Empty"); }
 
 // --- HTML & UI ---
 const char INDEX_HTML[] PROGMEM = R"rawliteral(

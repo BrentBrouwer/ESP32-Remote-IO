@@ -19,7 +19,7 @@ class FestoCmmsControl
         // Methods
         void EnableController();
         void DisableController();
-        void StopMotion();
+        // void StopMotion();
         void Home();
         void GoToPosition(int posNr);
         bool HasError();

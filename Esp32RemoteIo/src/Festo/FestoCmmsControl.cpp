@@ -33,12 +33,12 @@ void FestoCmmsControl::DisableController()
     SetController(false);
 }
 
-void FestoCmmsControl::StopMotion()
-{
-    Serial.println("Stop motion");
-    digitalWrite(m_DiStartMotion, false);
-    // digitalWrite(m_DiDisableStop, false);
-}
+// void FestoCmmsControl::StopMotion()
+// {
+//     Serial.println("Stop motion");
+//     digitalWrite(m_DiStartMotion, false);
+//     // digitalWrite(m_DiDisableStop, false);
+// }
 
 void FestoCmmsControl::Home()
 {

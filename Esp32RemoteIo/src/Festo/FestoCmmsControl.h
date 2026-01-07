@@ -11,9 +11,9 @@ class FestoCmmsControl
                          int diRecordBit2,
                          int diRecordBit3,
                          int diRecordBit4,
-                         int doEnabled,
+                         int doControllerReady,
                          int doMotionFinished,
-                         int doTest,
+                         int doAcknowledgeStart,
                          int doError);
 
         // Methods
@@ -23,6 +23,8 @@ class FestoCmmsControl
         void Home();
         void GoToPosition(int posNr);
         bool HasError();
+        bool IsMotionFinished();
+        bool IsStartAcknowledged();
         void AllOff();
 
     private:
@@ -39,14 +41,15 @@ class FestoCmmsControl
         int m_RecordBits[5];
 
         // CMMS Outputs
-        const int m_DoEnabled;
+        const int m_DoControllerEnabled;
         const int m_DoMotionFinished;
-        const int m_DoUnknown;
+        const int m_DoAcknowledgeStart;
         const int m_DoError;
 
         // Methods
         void PrintPins();
         void SetRecordBits();
         void SetController(bool enable);
+        void WaitForControllerReady();
         void WaitForMotionFinish();
 };

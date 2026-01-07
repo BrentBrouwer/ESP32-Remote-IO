@@ -35,7 +35,7 @@ char actionLabels[DefinedActions][32] = {"Enable", "Stop motion", "Home", "Pos 1
 // NEW: Define if button is a Toggle (true) or a Momentary Click (false)
 bool actionIsToggle[DefinedActions] = {
     true,  // Enable (Toggle)
-    false, // Stop (Click)
+    true,  // Stop (Click)
     false, // Home (Click)
     false, // Position 1 (Click)
     false, // Position 2 (Click)
@@ -56,7 +56,10 @@ void customAction1()
         m_FestoControl->DisableController();
     }
 }
-void customAction2() { m_FestoControl->StopMotion(); }
+void customAction2() 
+{ 
+    m_FestoControl->StopMotion(); 
+}
 void customAction3() { m_FestoControl->Home(); }
 void customAction4() { m_FestoControl->GoToPosition(1); }
 void customAction5() { m_FestoControl->GoToPosition(2); }

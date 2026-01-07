@@ -8,8 +8,10 @@ const int AliveOnPeriodTime = 100;
 const int AliveOffPeriodTime = 2000;
 unsigned long AliveLedStatusChanged = 0;
 
-const char *ssid = "Sjaan-24G";
-const char *password = "Janrenlen1";
+// const char *ssid = "Sjaan-24G";
+// const char *password = "Janrenlen1";
+const char *ssid = "vBakel";
+const char *password = "1001100111";
 
 WebServer server(80);
 FestoCmmsControl *m_FestoControl;
@@ -33,7 +35,7 @@ char actionLabels[DefinedActions][32] = {"Enable", "Stop motion", "Home", "Pos 1
 // NEW: Define if button is a Toggle (true) or a Momentary Click (false)
 bool actionIsToggle[DefinedActions] = {
     true,  // Enable (Toggle)
-    false,  // Stop (Click)
+    false, // Stop (Click)
     false, // Home (Click)
     false, // Position 1 (Click)
     false, // Position 2 (Click)
@@ -252,6 +254,8 @@ void setup()
         Serial.print(".");
         delay(500);
     }
+    Serial.print("\nAddress: ");
+    Serial.println(WiFi.localIP());
 
     server.on("/", []()
               { server.send(200, "text/html", INDEX_HTML); });

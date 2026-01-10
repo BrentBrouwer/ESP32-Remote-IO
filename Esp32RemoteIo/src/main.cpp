@@ -8,10 +8,10 @@ const int AliveOnPeriodTime = 100;
 const int AliveOffPeriodTime = 2000;
 unsigned long AliveLedStatusChanged = 0;
 
-// const char *ssid = "Sjaan-24G";
-// const char *password = "Janrenlen1";
-const char *ssid = "vBakel";
-const char *password = "1001100111";
+const char *ssid = "Sjaan-24G";
+const char *password = "Janrenlen1";
+// const char *ssid = "vBakel";
+// const char *password = "1001100111";
 
 WebServer server(80);
 FestoCmmsControl *m_FestoControl;

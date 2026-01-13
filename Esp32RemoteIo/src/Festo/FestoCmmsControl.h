@@ -53,4 +53,9 @@ class FestoCmmsControl
         void SetController(bool enable);
         void WaitForControllerReady();
         void WaitForMotionFinish();
+
+        bool m_ControllerEnabled = false;
+        bool m_MotionFinished = false;
+        bool m_AcknowledgeStart = false;
+        bool m_ErrorActive = false;
 };

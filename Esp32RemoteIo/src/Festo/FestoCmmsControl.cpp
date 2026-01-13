@@ -48,15 +48,15 @@ void FestoCmmsControl::Home()
 void FestoCmmsControl::GoToPosition(int posNr)
 {
     // Only 63 positions known in internal memory
-    if (posNr < 64 && !HasError())
+    if (posNr < 64) // && !HasError())
     {
-        Serial.printf("Check value: %i\n", posNr);
+        Serial.printf("[Request] Go to position: %i", posNr);
 
         // Check which bits are set
         for (int i = 0; i < 5; i++)
         {
             bool active = posNr & 1;
-            Serial.printf("Index: %i -> Output: %i %s\n", i, m_RecordBits[i], active ? "active" : "inactive");
+            // Serial.printf("Index: %i -> Output: %i %s\n", i, m_RecordBits[i], active ? "active" : "inactive");
 
             // Set the record bit input
             digitalWrite(m_RecordBits[i], active ? HIGH : LOW);

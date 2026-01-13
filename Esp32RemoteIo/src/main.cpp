@@ -193,7 +193,7 @@ void handleStatus()
     for (int i = 0; i < DefinedActions; i++)
     {
         bool enabled = true;
-        if (i > 0 && m_FestoControl->IsControllerReady())
+        if (i > 0 && !m_FestoControl->IsControllerReady())
         {
             enabled = false;
         }
@@ -250,7 +250,7 @@ void setup()
     }
     for (int i = 0; i < inputCount; i++)
     {
-        pinMode(inputPins[i], INPUT_PULLUP);
+        pinMode(inputPins[i], INPUT_PULLDOWN);
     }
 
     m_FestoControl = new FestoCmmsControl(4, 12, 5, 13, 14, 15, 16, 17, 18, 32, 33, 34, 35);

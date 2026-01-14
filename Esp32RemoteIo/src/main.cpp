@@ -34,7 +34,8 @@ bool actionIsToggle[DefinedActions] = {true, false, false, false, false};
 // --- 4. CYCLE CONTROL VARIABLES ---
 int cycleRemaining = 0;
 int currentCycle = 0;
-int currentStep = 0; // Tracks: 0 = Move to Pos 1, 1 = Move to Pos 2
+int currentStep = 0;
+int cycleDelayMs = 1000; // Value for delay between steps
 bool stepInitiated = false;
 unsigned long stepTimer = 0;
 
@@ -59,7 +60,7 @@ void customAction5()
 {
     m_FestoControl->AllOff();
     cycleRemaining = 0;
-} // All off stops cycle too
+}
 
 // --- HTML & UI ---
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -85,7 +86,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         .btn-toggle { background-color: #ff9800; }
         .btn-click { background-color: #607d8b; }
         .btn-cycle { background-color: #4caf50; margin-top: 10px; }
-        input[type=number] { width: 80%; padding: 8px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 1.1em; text-align: center; }
+        .btn-stop { background-color: #f44336; margin-top: 10px; }
+        input[type=number] { width: 80%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 1.1em; text-align: center; }
         button:active { transform: scale(0.95); }
         button:disabled { background-color: #ccc !important; cursor: not-allowed; }
     </style>
@@ -98,8 +100,10 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         <div class="card card-cycle">
             <span class="label">Auto Cycle Count</span>
             <input type="number" id="cycleInput" value="0" min="0">
+            <span class="label">Delay per Step (ms)</span>
+            <input type="number" id="delayInput" value="1000" min="0">
             <div id="cycleStatus" class="status LOW">Idle</div>
-            <button class="btn-cycle" id="cycleBtn" onclick="startCycle()">START CYCLE</button>
+            <button class="btn-cycle" id="cycleBtn" onclick="toggleCycle()">START CYCLE</button>
         </div>
     </div>
 
@@ -111,11 +115,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <div class="container" id="input-container"></div>
 
     <script>
+        let isRunning = false;
+
         function triggerAction(id) { fetch(`/action?id=${id}`).then(() => updateStatus()); }
 
-        function startCycle() {
-            const count = document.getElementById('cycleInput').value;
-            fetch(`/startCycle?count=${count}`).then(() => updateStatus());
+        function toggleCycle() {
+            if(isRunning) {
+                // STOP Logic: Send count=0 to stop
+                fetch(`/startCycle?count=0`).then(() => updateStatus());
+            } else {
+                // START Logic
+                const count = document.getElementById('cycleInput').value;
+                const delay = document.getElementById('delayInput').value;
+                fetch(`/startCycle?count=${count}&delay=${delay}`).then(() => updateStatus());
+            }
         }
 
         function setInputName(id) {
@@ -125,17 +138,21 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
         function updateStatus() {
             fetch('/status').then(r => r.json()).then(data => {
-                // Update Cycle UI
                 const cycleStat = document.getElementById('cycleStatus');
                 const cycleBtn = document.getElementById('cycleBtn');
+                
                 if(data.cycleRemaining > 0) {
+                    isRunning = true;
                     cycleStat.innerText = "Remaining: " + data.cycleRemaining;
                     cycleStat.className = "status HIGH";
-                    cycleBtn.disabled = true;
+                    cycleBtn.innerText = "STOP CYCLE";
+                    cycleBtn.className = "btn-stop";
                 } else {
+                    isRunning = false;
                     cycleStat.innerText = "Idle";
                     cycleStat.className = "status LOW";
-                    cycleBtn.disabled = false;
+                    cycleBtn.innerText = "START CYCLE";
+                    cycleBtn.className = "btn-cycle";
                 }
 
                 document.getElementById('action-container').innerHTML = data.actions.map((a, i) => `
@@ -167,14 +184,29 @@ void handleStartCycle()
     if (server.hasArg("count"))
     {
         int count = server.arg("count").toInt();
+
+        // If user sends count 0 or we are already running and they press button, STOP.
+        if (count <= 0)
+        {
+            cycleRemaining = 0;
+            server.send(200, "text/plain", "STOPPED");
+            Serial.println("Cycle manually stopped.");
+            return;
+        }
+
+        if (server.hasArg("delay"))
+        {
+            cycleDelayMs = server.arg("delay").toInt();
+        }
+
         if (count > 0 && m_FestoControl->IsControllerReady())
         {
             cycleRemaining = count;
-            currentStep = 0; // <-- IMPORTANT: Start at first step
+            currentStep = 0;
             stepInitiated = false;
             server.send(200, "text/plain", "OK");
             Serial.println("===============================");
-            Serial.printf("Start %i cycles\n", count);
+            Serial.printf("Start %i cycles with %i ms delay\n", count, cycleDelayMs);
             return;
         }
     }
@@ -213,66 +245,78 @@ void handleStatus()
 
 void processCycleMachine()
 {
+    // SAFETY CHECK: If Pin 35 (Error) is HIGH, abort cycle
+    // if (digitalRead(35) == HIGH && cycleRemaining > 0)
+    // {
+    //     cycleRemaining = 0;
+    //     Serial.println("!!! SAFETY ABORT: Festo Error Detected (Pin 35) !!!");
+    //     return;
+    // }
+
     if (cycleRemaining <= 0)
     {
         currentCycle = 0;
-        currentStep = 0; // Reset step tracker when idle
+        currentStep = 0;
         return;
     }
 
-    // Input 33 is "Motion Finished" from your Festo controller
-    // bool motionFinished = m_FestoControl->IsMotionFinished();
     unsigned long now = millis();
 
     switch (currentStep)
     {
-        case 0: // --- STEP 0: MOVE TO POSITION 1 ---
-            if (!stepInitiated)
-            {
-                currentCycle++;
-                m_FestoControl->GoToPosition(1);
-                stepInitiated = true;
-                stepTimer = now; // Record start time
-                Serial.printf("[%lu] Cycle %i: Moving to Pos 1\n", now, currentCycle);
-                delay(1000);
-            }
+    case 0: // MOVE TO POSITION 1
+        if (!stepInitiated)
+        {
+            currentCycle++;
+            m_FestoControl->GoToPosition(1);
+            stepInitiated = true;
+            stepTimer = now;
+            Serial.printf("<%lu> Cycle %i: Moving to Pos 1\n", now, currentCycle);
+            currentStep = 1;
+            delay(200); // Wait for controller to clear 'Motion Finished' flag
+        }
+        break;
 
-            // ToDo: Make new case for motion reach and check if delay (below) is necessary
-            if (m_FestoControl->IsMotionFinished() && (now - stepTimer > 3000))
+    case 1: // WAIT FOR REACHED + DELAY
+        if (m_FestoControl->IsMotionFinished())
+        {
+            if (now - stepTimer >= (unsigned long)cycleDelayMs)
             {
-                currentStep = 1;       // Move to next step
-                stepInitiated = false; // Reset for the next step
-                stepTimer = now;       // Optional: Use this if you want a pause between moves
-                Serial.printf("[%lu] Cycle %i: Position 1 reached\n", now, currentCycle);
-            }
-            break;
-
-        case 1: // --- STEP 1: MOVE TO POSITION 2 ---
-            if (!stepInitiated)
-            {
-                m_FestoControl->GoToPosition(2);
-                stepInitiated = true;
-                stepTimer = now;
-                Serial.printf("[%lu] Cycle %i: Moving to Pos 2\n", now, currentCycle);
-                delay(1000);
-            }
-
-            // ToDo: Make new case for motion reach and check if delay (below) is necessary
-            if (m_FestoControl->IsMotionFinished() && (now - stepTimer > 3000))
-            {
-                // SEQUENCE COMPLETE
-                cycleRemaining--; // One full cycle done
-                currentStep = 0;  // Reset to first step
                 stepInitiated = false;
-                Serial.printf("[%lu] Cycle %i: Position 2 reached\n", now, currentCycle);
-                Serial.print("Cycle Complete. Remaining: ");
-                Serial.println(cycleRemaining);
+                stepTimer = now;
+                Serial.printf("<%lu> Cycle %i: Pos 1 Dwell finished\n", now, currentCycle);
+                currentStep = 2;
             }
-            break;
+        }
+        break;
+
+    case 2: // MOVE TO POSITION 2
+        if (!stepInitiated)
+        {
+            m_FestoControl->GoToPosition(2);
+            stepInitiated = true;
+            stepTimer = now;
+            Serial.printf("<%lu> Cycle %i: Moving to Pos 2\n", now, currentCycle);
+            currentStep = 3;
+            delay(200);
+        }
+        break;
+
+    case 3: // WAIT FOR REACHED + DELAY
+        if (m_FestoControl->IsMotionFinished())
+        {
+            if (now - stepTimer >= (unsigned long)cycleDelayMs)
+            {
+                cycleRemaining--;
+                currentStep = 0;
+                stepInitiated = false;
+                Serial.printf("<%lu> Cycle %i: Pos 2 Dwell finished\n", now, currentCycle);
+            }
+        }
+        break;
     }
 }
 
-// ... (Rest of support functions: ControlAliveLed, handleAction, setup, loop)
 void handleAction()
 {
     if (server.hasArg("id"))
@@ -337,13 +381,18 @@ void setup()
     {
         pinMode(inputPins[i], INPUT_PULLDOWN);
     }
+
     m_FestoControl = new FestoCmmsControl(4, 12, 5, 13, 14, 15, 16, 17, 18, 32, 33, 34, 35);
+
     WiFi.begin(ssid, password);
+    Serial.print("Connecting...");
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
         Serial.print(".");
     }
+    Serial.println("");
+
     server.on("/", []()
               { server.send(200, "text/html", INDEX_HTML); });
     server.on("/action", handleAction);
@@ -356,5 +405,6 @@ void loop()
 {
     ControlAliveLed();
     server.handleClient();
-    processCycleMachine(); // Handles the counting/logic without blocking
+    // m_FestoControl->CheckStates();
+    processCycleMachine();
 }

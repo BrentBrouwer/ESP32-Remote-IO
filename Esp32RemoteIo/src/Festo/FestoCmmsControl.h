@@ -17,6 +17,7 @@ class FestoCmmsControl
                          int doError);
 
         // Methods
+        void CheckStates();
         void EnableController();
         void DisableController();
         // void StopMotion();

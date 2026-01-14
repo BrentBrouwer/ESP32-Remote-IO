@@ -91,7 +91,7 @@ bool FestoCmmsControl::IsControllerReady()
 bool FestoCmmsControl::HasError()
 {
     bool value = digitalRead(m_DoError);
-    if (m_ControllerEnabled != value)
+    if (m_ErrorActive != value)
     {
         m_ErrorActive = value;
         Serial.printf("[Status] Controller has%serror\n", m_ErrorActive ? " " : " no ");
@@ -115,7 +115,7 @@ bool FestoCmmsControl::IsStartAcknowledged()
     bool value = digitalRead(m_DoAcknowledgeStart);
     if (m_AcknowledgeStart != value)
     {
-        m_MotionFinished = value;
+        m_AcknowledgeStart = value;
         Serial.printf("[Status] Acknowledge start %s\n", m_AcknowledgeStart ? "active" : "not active");
     }
     return value;
@@ -132,6 +132,13 @@ void FestoCmmsControl::AllOff()
     digitalWrite(m_DiRecordBit2, LOW);
     digitalWrite(m_DiRecordBit3, LOW);
     digitalWrite(m_DiRecordBit4, LOW);
+}
+
+void FestoCmmsControl::CheckStates()
+{
+    IsControllerReady();
+    IsMotionFinished();
+    HasError();
 }
 
 void FestoCmmsControl::PrintPins()

@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include "Festo/FestoCmmsControl.h"
+#include "Logging/Logging.h"
 
 // --- Configuration ---
 const int LED_ALIVE_PIN = 2;
@@ -38,6 +39,8 @@ int currentStep = 0;
 int cycleDelayMs = 1000; // Value for delay between steps
 bool stepInitiated = false;
 unsigned long stepTimer = 0;
+bool motionFinished = false;
+unsigned long motionFinishedMs = 0;
 
 // --- PLACE YOUR CUSTOM IMPLEMENTATIONS HERE ---
 void customAction1()
@@ -190,7 +193,7 @@ void handleStartCycle()
         {
             cycleRemaining = 0;
             server.send(200, "text/plain", "STOPPED");
-            Serial.println("Cycle manually stopped.");
+            LogWithTime("Cycle manually stopped");
             return;
         }
 
@@ -206,7 +209,7 @@ void handleStartCycle()
             stepInitiated = false;
             server.send(200, "text/plain", "OK");
             Serial.println("===============================");
-            Serial.printf("Start %i cycles with %i ms delay\n", count, cycleDelayMs);
+            LogWithTime("Start %i cycles with %i ms delay", count, cycleDelayMs);
             return;
         }
     }
@@ -261,59 +264,69 @@ void processCycleMachine()
     }
 
     unsigned long now = millis();
+    if (motionFinished != m_FestoControl->IsMotionFinished() &&
+        m_FestoControl->IsMotionFinished())
+    {
+        // Take a time stamp on the rising edge when motion is finished
+        motionFinished = m_FestoControl->IsMotionFinished();
+        motionFinishedMs = now;
+    }
 
     switch (currentStep)
     {
-    case 0: // MOVE TO POSITION 1
-        if (!stepInitiated)
-        {
-            currentCycle++;
-            m_FestoControl->GoToPosition(1);
-            stepInitiated = true;
-            stepTimer = now;
-            Serial.printf("<%lu> Cycle %i: Moving to Pos 1\n", now, currentCycle);
-            currentStep = 1;
-            delay(200); // Wait for controller to clear 'Motion Finished' flag
-        }
-        break;
-
-    case 1: // WAIT FOR REACHED + DELAY
-        if (m_FestoControl->IsMotionFinished())
-        {
-            if (now - stepTimer >= (unsigned long)cycleDelayMs)
+        case 0: // MOVE TO POSITION 1
+            if (!stepInitiated)
             {
-                stepInitiated = false;
+                currentCycle++;
+                m_FestoControl->GoToPosition(1);
+                stepInitiated = true;
                 stepTimer = now;
-                Serial.printf("<%lu> Cycle %i: Pos 1 Dwell finished\n", now, currentCycle);
-                currentStep = 2;
+                LogWithTime("<%lu> Cycle %i: Moving to Pos 1\n", now, currentCycle);
+                currentStep = 1;
+                delay(200);
             }
-        }
-        break;
+            break;
 
-    case 2: // MOVE TO POSITION 2
-        if (!stepInitiated)
-        {
-            m_FestoControl->GoToPosition(2);
-            stepInitiated = true;
-            stepTimer = now;
-            Serial.printf("<%lu> Cycle %i: Moving to Pos 2\n", now, currentCycle);
-            currentStep = 3;
-            delay(200);
-        }
-        break;
-
-    case 3: // WAIT FOR REACHED + DELAY
-        if (m_FestoControl->IsMotionFinished())
-        {
-            if (now - stepTimer >= (unsigned long)cycleDelayMs)
+        case 1: // WAIT FOR REACHED + DELAY
+            if (m_FestoControl->IsMotionFinished())
             {
-                cycleRemaining--;
-                currentStep = 0;
-                stepInitiated = false;
-                Serial.printf("<%lu> Cycle %i: Pos 2 Dwell finished\n", now, currentCycle);
+                if (now - motionFinishedMs >= (unsigned long)cycleDelayMs)
+                {
+                    motionFinished = false;
+                    stepInitiated = false;
+                    stepTimer = now;
+                    LogWithTime("<%lu> Cycle %i: Pos 1 Dwell finished\n", now, currentCycle);
+                    currentStep = 2;
+                }
             }
-        }
-        break;
+            break;
+
+        case 2: // MOVE TO POSITION 2
+            if (!stepInitiated)
+            {
+                m_FestoControl->GoToPosition(2);
+                stepInitiated = true;
+                stepTimer = now;
+                LogWithTime("<%lu> Cycle %i: Moving to Pos 2\n", now, currentCycle);
+                currentStep = 3;
+                // while (m_FestoControl->IsMotionFinished()) {delay(5);};
+                delay(200);
+            }
+            break;
+
+        case 3: // WAIT FOR REACHED + DELAY
+            if (m_FestoControl->IsMotionFinished())
+            {
+                if (now - motionFinishedMs >= (unsigned long)cycleDelayMs)
+                {
+                    motionFinished = false;
+                    cycleRemaining--;
+                    currentStep = 0;
+                    stepInitiated = false;
+                    LogWithTime("<%lu> Cycle %i: Pos 2 Dwell finished\n", now, currentCycle);
+                }
+            }
+            break;
     }
 }
 
@@ -383,7 +396,7 @@ void setup()
     }
     m_FestoControl = new FestoCmmsControl(4, 12, 5, 13, 14, 15, 16, 17, 18, 32, 33, 34, 35);
     WiFi.begin(ssid, password);
-    Serial.print("Connecting...");
+    LogWithTime("Connecting...");
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
@@ -403,6 +416,6 @@ void loop()
 {
     ControlAliveLed();
     server.handleClient();
-    // m_FestoControl->CheckStates();
+    m_FestoControl->CheckStates();
     processCycleMachine();
 }

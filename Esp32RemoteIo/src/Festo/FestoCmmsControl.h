@@ -56,7 +56,12 @@ class FestoCmmsControl
         void WaitForMotionFinish();
 
         bool m_ControllerEnabled = false;
-        bool m_MotionFinished = false;
+
+        unsigned long m_MotionFinishedMs;
+        unsigned long m_MotionStartedMs;
+        bool m_MotionFinished;
+        bool m_MotionFinishedWithDelay;
+        
         bool m_AcknowledgeStart = false;
         bool m_ErrorActive = false;
 };

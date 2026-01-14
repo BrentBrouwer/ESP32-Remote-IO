@@ -1,0 +1,1 @@
+void LogWithTime(const char* msg);

@@ -1,4 +1,5 @@
 #include "FestoCmmsControl.h"
+#include "../Logging/Logging.h"
 #include <Arduino.h>
 
 FestoCmmsControl::FestoCmmsControl(int diEnableController,
@@ -19,7 +20,7 @@ FestoCmmsControl::FestoCmmsControl(int diEnableController,
     PrintPins();
     SetRecordBits();
     AllOff();
-    Serial.println("Festo controller created");
+    LogWithTime("Festo controller created");
 }
 
 void FestoCmmsControl::EnableController()
@@ -34,14 +35,14 @@ void FestoCmmsControl::DisableController()
 
 // void FestoCmmsControl::StopMotion()
 // {
-//     Serial.println("Stop motion");
+//     LogWithTime("Stop motion");
 //     digitalWrite(m_DiStartMotion, false);
 //     // digitalWrite(m_DiDisableStop, false);
 // }
 
 void FestoCmmsControl::Home()
 {
-    Serial.println("Start homing");
+    LogWithTime("Start homing");
     GoToPosition(0);
 }
 
@@ -50,7 +51,7 @@ void FestoCmmsControl::GoToPosition(int posNr)
     // Only 63 positions known in internal memory
     if (posNr < 64) // && !HasError())
     {
-        Serial.printf("[Request] Go to position: %i", posNr);
+        LogWithTime("[Request] Go to position: %i", posNr);
 
         // Check which bits are set
         for (int i = 0; i < 5; i++)
@@ -68,11 +69,11 @@ void FestoCmmsControl::GoToPosition(int posNr)
         digitalWrite(m_DiStartMotion, true);
         delay(50);
         digitalWrite(m_DiStartMotion, false);
-        Serial.println("");
+        // Serial.println("");
     }
     else
     {
-        Serial.printf("Invalid pos nr: %i\n", posNr);
+        LogWithTime("Invalid pos nr: %i\n", posNr);
         // StopMotion();
     }
 }
@@ -83,7 +84,7 @@ bool FestoCmmsControl::IsControllerReady()
     if (m_ControllerEnabled != value)
     {
         m_ControllerEnabled = value;
-        Serial.printf("[Status] Controller %s\n", m_ControllerEnabled ? "ready" : "not ready");
+        LogWithTime("[Status] Controller %s\n", m_ControllerEnabled ? "ready" : "not ready");
     }
     return value;
 }
@@ -94,20 +95,14 @@ bool FestoCmmsControl::HasError()
     if (m_ErrorActive != value)
     {
         m_ErrorActive = value;
-        Serial.printf("[Status] Controller has%serror\n", m_ErrorActive ? " " : " no ");
+        LogWithTime("[Status] Controller has%serror\n", m_ErrorActive ? " " : " no ");
     }
     return value;
 }
 
 bool FestoCmmsControl::IsMotionFinished()
 {
-    bool value = digitalRead(m_DoMotionFinished);
-    if (m_MotionFinished != value)
-    {
-        m_MotionFinished = value;
-        Serial.printf("[Status] Motion %s\n", m_MotionFinished ? "finished" : "not finished");
-    }
-    return value;
+    return m_MotionFinishedWithDelay;
 }
 
 bool FestoCmmsControl::IsStartAcknowledged()
@@ -116,7 +111,7 @@ bool FestoCmmsControl::IsStartAcknowledged()
     if (m_AcknowledgeStart != value)
     {
         m_AcknowledgeStart = value;
-        Serial.printf("[Status] Acknowledge start %s\n", m_AcknowledgeStart ? "active" : "not active");
+        LogWithTime("[Status] Acknowledge start %s\n", m_AcknowledgeStart ? "active" : "not active");
     }
     return value;
 }
@@ -136,9 +131,45 @@ void FestoCmmsControl::AllOff()
 
 void FestoCmmsControl::CheckStates()
 {
-    IsControllerReady();
-    IsMotionFinished();
-    HasError();
+    unsigned long now = millis();
+    // IsControllerReady();
+
+    // Motion finish
+    bool value = digitalRead(m_DoMotionFinished);
+    if (m_MotionFinished != value)
+    {
+        m_MotionFinished = value;
+        if (value)
+        {
+            // Rising edge
+            m_MotionFinishedMs = now;
+        }
+        else
+        {
+            // Falling edge
+            m_MotionFinishedWithDelay = false;
+            m_MotionStartedMs = now;
+        }
+    }
+    else
+    {
+        // Same status, check for how long
+        if (m_MotionFinished &&
+            !m_MotionFinishedWithDelay &&
+            now - m_MotionFinishedMs >= 50)
+        {
+            m_MotionFinishedWithDelay = true;
+            LogWithTime("[Status] Motion %s\n", m_MotionFinished ? "finished" : "not finished");
+        }
+        // else if (!m_MotionFinished &&
+        //          now - m_MotionStartedMs >= 50)
+        // {
+        //     m_MotionFinishedWithDelay = false;
+        //     LogWithTime("[Status] Motion %s\n", m_MotionFinished ? "finished" : "not finished");
+        // }
+    }
+
+    // HasError();
 }
 
 void FestoCmmsControl::PrintPins()
@@ -178,12 +209,12 @@ void FestoCmmsControl::SetRecordBits()
         m_RecordBits[i] = recordBitPin;
         // Serial.printf("  Pin nr: %i\n", recordBitPin);
     }
-    Serial.println("Record bits set");
+    LogWithTime("Record bits set");
 }
 
 void FestoCmmsControl::SetController(bool enable)
 {
-    Serial.printf("[Request] %s controller\n", enable ? "Enable" : "Disable");
+    LogWithTime("[Request] %s controller\n", enable ? "Enable" : "Disable");
     digitalWrite(m_DiDisableStop, enable);
     digitalWrite(m_DiEnableMotor, enable);
     delay(15);

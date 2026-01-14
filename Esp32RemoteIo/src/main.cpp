@@ -381,9 +381,7 @@ void setup()
     {
         pinMode(inputPins[i], INPUT_PULLDOWN);
     }
-
     m_FestoControl = new FestoCmmsControl(4, 12, 5, 13, 14, 15, 16, 17, 18, 32, 33, 34, 35);
-
     WiFi.begin(ssid, password);
     Serial.print("Connecting...");
     while (WiFi.status() != WL_CONNECTED)
